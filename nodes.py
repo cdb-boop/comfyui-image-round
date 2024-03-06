@@ -27,6 +27,7 @@ def split_value(value, split):
 
 class ImageRound:
     RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
     FUNCTION = "round_image"
     OUTPUT_NODE = True
     CATEGORY = "image"
