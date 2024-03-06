@@ -1,4 +1,4 @@
-class ImagePad:
+class ImageRoundPad:
     def __init__(self):
         pass
 
@@ -18,14 +18,14 @@ class ImagePad:
         return True
 
     RETURN_TYPES = ("IMAGE", "MASK",)
-    FUNCTION = "scale"
+    FUNCTION = "pad_rounded"
     OUTPUT_NODE = True
     CATEGORY = "image"
 
 NODE_CLASS_MAPPINGS = {
-    "ImagePad": ImagePad,
+    "ImageRoundPad": ImageRoundPad,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "ImagePad": "Image Pad",
+    "ImageRoundPad": "Image Pad (Rounded)",
 }
