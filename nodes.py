@@ -102,8 +102,8 @@ class ImageRound:
             memory_format = None
             if images.is_contiguous():
                 memory_format = torch.contiguous_format
-            else:
-                raise NotImplementedError("Unknown memory format!")
+            #else:
+            #    raise NotImplementedError("Unknown memory format!")
             new_images = torch.empty(
                 size=(count, rounded_y, rounded_x, colors),
                 dtype=images.dtype,
