@@ -147,7 +147,7 @@ class ImageRound:
 
 class ImageRoundAdvanced:
     RETURN_TYPES = ("IMAGE", "INT", "INT", "INT", "INT")
-    RETURN_NAMES = ("images", "change_left", "change_right", "change_bottom", "change_top")
+    RETURN_NAMES = ("images", "crop_left", "crop_right", "crop_bottom", "crop_top")
     FUNCTION = "round_image"
     OUTPUT_NODE = True
     CATEGORY = "image"
@@ -226,16 +226,16 @@ class ImageCropAdvanced:
         return {
             "required": {
                 "images": ("IMAGE",),
-                "change_left": ("INT", {"default": 0}),
-                "change_right": ("INT", {"default": 0}),
-                "change_bottom": ("INT", {"default": 0}),
-                "change_top": ("INT", {"default": 0}),
+                "crop_left": ("INT", {"default": 0}),
+                "crop_right": ("INT", {"default": 0}),
+                "crop_bottom": ("INT", {"default": 0}),
+                "crop_top": ("INT", {"default": 0}),
             },
             "optional": {
-                "change_left_override": ("INT", {"forceInput": True, "default": 0}),
-                "change_right_override": ("INT", {"forceInput": True, "default": 0}),
-                "change_bottom_override": ("INT", {"forceInput": True, "default": 0}),
-                "change_top_override": ("INT", {"forceInput": True, "default": 0}),
+                "crop_left_override": ("INT", {"forceInput": True, "default": 0}),
+                "crop_right_override": ("INT", {"forceInput": True, "default": 0}),
+                "crop_bottom_override": ("INT", {"forceInput": True, "default": 0}),
+                "crop_top_override": ("INT", {"forceInput": True, "default": 0}),
             },
         }
 
@@ -243,34 +243,34 @@ class ImageCropAdvanced:
         self,
         images: torch.Tensor, 
         # default/fallback
-        change_left: int, 
-        change_right: int, 
-        change_bottom: int, 
-        change_top: int, 
+        crop_left: int, 
+        crop_right: int, 
+        crop_bottom: int, 
+        crop_top: int, 
         # optional input overrides
-        change_left_override: int = None,
-        change_right_override: int = None,
-        change_bottom_override: int = None,
-        change_top_override: int = None,
+        crop_left_override: int = None,
+        crop_right_override: int = None,
+        crop_bottom_override: int = None,
+        crop_top_override: int = None,
     ):
-        change_left = change_left_override if type(change_left_override) is int else change_left
-        change_right = change_right_override if type(change_right_override) is int else change_right
-        change_bottom = change_bottom_override if type(change_bottom_override) is int else change_bottom
-        change_top = change_top_override if type(change_top_override) is int else change_top
+        crop_left = crop_left_override if type(crop_left_override) is int else crop_left
+        crop_right = crop_right_override if type(crop_right_override) is int else crop_right
+        crop_bottom = crop_bottom_override if type(crop_bottom_override) is int else crop_bottom
+        crop_top = crop_top_override if type(crop_top_override) is int else crop_top
         
-        change_left = max(change_left, 0)
-        change_right = max(change_right, 0)
-        change_bottom = max(change_bottom, 0)
-        change_top = max(change_top, 0)
+        crop_left = max(crop_left, 0)
+        crop_right = max(crop_right, 0)
+        crop_bottom = max(crop_bottom, 0)
+        crop_top = max(crop_top, 0)
         
-        if change_left == 0 and change_right == 0 and change_bottom == 0 and change_top == 0:
+        if crop_left == 0 and crop_right == 0 and crop_bottom == 0 and crop_top == 0:
             return (images,)
         
         (count, original_y, original_x, colors) = images.size()
         cropped_images = images[
             :,
-            change_top:original_y-change_bottom,
-            change_left:original_x-change_right,
+            crop_top:original_y-crop_bottom,
+            crop_left:original_x-crop_right,
             :,
         ]#.clone()
         return (cropped_images,)
