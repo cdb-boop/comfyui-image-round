@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-image-round"
+description = "A simple node to round an input image up (pad) or down (crop) to the nearest integer multiple. Padding offset from left/bottom and the padding value are adjustable."
+version = "1.0.0"
+license = "LICENSE"
+
+[project.urls]
+Repository = "https://github.com/cdb-boop/comfyui-image-round"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "comfyui-image-round"
+Icon = ""
