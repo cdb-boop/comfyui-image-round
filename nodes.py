@@ -275,14 +275,133 @@ class ImageCropAdvanced:
         ]#.clone()
         return (cropped_images,)
 
+class CircularCrop:
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    FUNCTION = "circular_crop"
+    OUTPUT_NODE = True
+    CATEGORY = "image"
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(self):
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "center_x": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "center_y": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "radius": ("FLOAT", {"default": 0.4, "min": 0.1, "max": 1.0, "step": 0.01}),
+                "feather": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1}),
+                "output_size": ("INT", {"default": 512, "min": 64, "max": 4096, "step": 8}),
+            },
+        }
+
+    def circular_crop(self, images: torch.Tensor, center_x: float, center_y: float, radius: float, feather: int, output_size: int):
+        batch_size, height, width, channels = images.shape
+        
+        # Create coordinate grids with higher precision
+        y_coords = torch.linspace(0, 1, height, device=images.device)
+        x_coords = torch.linspace(0, 1, width, device=images.device)
+        y_grid, x_grid = torch.meshgrid(y_coords, x_coords, indexing='ij')
+        
+        # Calculate aspect ratio
+        aspect_ratio = width / height
+        
+        # Adjust x coordinates to maintain circular shape
+        x_grid_adjusted = (x_grid - center_x) * aspect_ratio + center_x
+        
+        # Calculate distance from center with higher precision
+        dist = torch.sqrt((x_grid_adjusted - center_x)**2 + (y_grid - center_y)**2)
+        
+        # Create circular mask with higher precision
+        mask = (dist <= radius).float()
+        
+        # Apply feathering if specified
+        if feather > 0:
+            feather_radius = feather / min(width, height)
+            feather_mask = torch.clamp((radius - dist) / feather_radius, 0, 1)
+            mask = mask * feather_mask
+        
+        # Expand mask for RGB channels
+        mask_rgb = mask.unsqueeze(-1).unsqueeze(0).expand(batch_size, -1, -1, channels)
+        
+        # Apply mask to image
+        result = images * mask_rgb
+        
+        # Find the exact boundaries of the circle
+        y_indices = torch.where(mask > 0)[0]
+        x_indices = torch.where(mask > 0)[1]
+        
+        if len(y_indices) > 0 and len(x_indices) > 0:
+            min_y = y_indices.min().item()
+            max_y = y_indices.max().item()
+            min_x = x_indices.min().item()
+            max_x = x_indices.max().item()
+            
+            # Calculate the size of the square crop
+            crop_size = max(max_x - min_x + 1, max_y - min_y + 1)
+            
+            # Calculate the center of the crop
+            center_y_crop = (min_y + max_y) // 2
+            center_x_crop = (min_x + max_x) // 2
+            
+            # Calculate the square crop boundaries
+            half_size = crop_size // 2
+            min_y = max(0, center_y_crop - half_size)
+            max_y = min(height - 1, center_y_crop + half_size)
+            min_x = max(0, center_x_crop - half_size)
+            max_x = min(width - 1, center_x_crop + half_size)
+            
+            # Ensure square crop
+            crop_size = min(max_x - min_x + 1, max_y - min_y + 1)
+            max_x = min_x + crop_size - 1
+            max_y = min_y + crop_size - 1
+            
+            # Crop to square
+            result = result[:, min_y:max_y+1, min_x:max_x+1, :]
+            mask = mask[min_y:max_y+1, min_x:max_x+1]
+        
+        # Resize to square output size
+        if output_size != width or output_size != height:
+            # Resize to square
+            result = torch.nn.functional.interpolate(
+                result.permute(0, 3, 1, 2),  # Change to NCHW format
+                size=(output_size, output_size),
+                mode='bilinear',
+                align_corners=False
+            ).permute(0, 2, 3, 1)  # Change back to NHWC format
+            
+            # Resize mask
+            mask = mask.unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions
+            mask = torch.nn.functional.interpolate(
+                mask,
+                size=(output_size, output_size),
+                mode='bilinear',
+                align_corners=False
+            ).squeeze(0).squeeze(0)  # Remove batch and channel dimensions
+        
+        # Create a transparent output with alpha channel (RGBA)
+        if channels == 3:  # If RGB image
+            # Create a new tensor with an additional alpha channel
+            alpha_channel = mask.unsqueeze(0).unsqueeze(-1).expand(batch_size, -1, -1, 1)
+            rgba = torch.cat([result, alpha_channel], dim=3)
+            return (rgba,)
+        else:
+            # Just return the masked image if not RGB
+            return (result,)
+
 NODE_CLASS_MAPPINGS = {
     "ComfyUI_Image_Round__ImageRound": ImageRound,
     "ComfyUI_Image_Round__ImageRoundAdvanced": ImageRoundAdvanced,
     "ComfyUI_Image_Round__ImageCropAdvanced": ImageCropAdvanced,
+    "ComfyUI_Image_Round__CircularCrop": CircularCrop,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ComfyUI_Image_Round__ImageRound": "Round Image (Pad/Crop)",
     "ComfyUI_Image_Round__ImageRoundAdvanced": "Round Image (Pad/Crop) (Advanced)",
     "ComfyUI_Image_Round__ImageCropAdvanced": "Crop Image (Advanced)",
+    "ComfyUI_Image_Round__CircularCrop": "Circular Crop",
 }
